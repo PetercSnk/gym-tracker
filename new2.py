@@ -108,6 +108,11 @@ def editGroups(df):
                 print("Invalid")
 
 
+def addExerciseToGroup(exercisesDF, groupsDF):
+    pass 
+
+
+
 # Menu for creating, deleting, and saving exercises
 def editExercises(df):
     while True:
@@ -157,7 +162,7 @@ def editExercises(df):
 
 # Creates a tracker file for the given exercise
 def createTracker(name, maxSets):
-    headers = ["Date"]
+    headers = ["Date", "Position"]
     for num in range(maxSets):
         numStr = str(num + 1)
         headers.append("Reps Set " + numStr)

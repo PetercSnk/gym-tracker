@@ -1,0 +1,13 @@
+{
+    "groups": [
+        {
+            "name": "g1",
+            "exercises": ["a", "b", "c"]
+        },
+        {
+            "name": "g2",
+            "exercises": ["d", "e", "f"]
+        }
+    ],
+    "exercises": ["a", "b", "c", "d", "e", "f"]
+}
