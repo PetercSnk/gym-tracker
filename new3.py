@@ -49,6 +49,7 @@ def readJSON(file):
 
 class Config():
     def __init__(self, file):
+        self.file = file
         self.data = readJSON(file)
 
     def getGroup(self, name):
@@ -74,6 +75,8 @@ class Config():
             self.data['exercises'].append(name)
 
     def removeExercise(self, name):
+        for group in self.data['groups']:
+            self.removeExerciseFromGroup(name, group['name'])
         exercises = [exercise for exercise in self.data['exercises'] if not (exercise == name)]
         self.data['exercises'] = exercises
 
@@ -83,9 +86,19 @@ class Config():
                 if exerciseName in self.data['exercises']:
                     if exerciseName not in self.data['groups'][index]['exercises']:
                         self.data['groups'][index]['exercises'].append(exerciseName)
+                        return
 
-
+    def removeExerciseFromGroup(self, exerciseName, groupName):
+        for index in range(len(self.data['groups'])):
+            if self.data['groups'][index]['name'] == groupName:
+                if exerciseName in self.data['exercises']:
+                    exercises = [exercise for exercise in self.data['groups'][index]['exercises'] if not (exercise == exerciseName)]
+                    self.data['groups'][index]['exercises'] = exercises
+                    return
         
+    def write(self):
+        with open(self.file, 'w') as f:
+            json.dump(self.data, f, indent=4)
 
 
 
@@ -95,10 +108,11 @@ class Config():
 
 
 c = Config(config)
-print(c.getGroup("g1"))
-c.addGroup("g2")
-#c.removeGroup("g2")
-c.addExercise("z")
-c.removeExercise("x")
-c.addExerciseToGroup("a", "g3")
+#c.createExercise("a")
+c.addExerciseToGroup("x", "g1")
+c.addExerciseToGroup('x', 'g2')
 print(c.data)
+c.removeExercise('a')
+c.removeExerciseFromGroup('e', 'g2')
+print(c.data)
+c.write()
