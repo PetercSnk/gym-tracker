@@ -5,11 +5,8 @@ import json
 
 # Directories and file locations
 cwd = os.path.dirname(os.path.abspath(__file__))
-configPath = os.path.join(cwd, 'config')
 dataPath = os.path.join(cwd, 'data')
 binPath = os.path.join(cwd, 'bin')
-groupsFile = os.path.join(configPath, 'groups.csv')
-exercisesFile = os.path.join(configPath, 'exercises.csv')
 config = os.path.join(cwd, 'config.json')
 
 
@@ -23,28 +20,29 @@ def writeCSV(filename, df):
     df.to_csv(filename, index=False)
 
 
-# Create directories
-for directory in [configPath, dataPath, binPath]:
-    if not os.path.exists(directory):
-        os.mkdir(directory)
-
-
-# Create config files
-for filename in [groupsFile, exercisesFile]:
-    if not os.path.isfile(filename):
-        df = pd.DataFrame(columns=['name'])
-        writeCSV(filename, df)
-
-
 def readJSON(file):
     try:
         with open(file, 'r') as f:
             data = json.load(f)
         return data
     except FileNotFoundError:
-        #write conf here
         print('File not found')
-        return {}
+
+
+def writeJSON(file, data):
+    with open(file, 'w') as f:
+        json.dump(data, f, indent=4)
+
+
+def createTracker(name, sets):
+    headers = ["Date", "Position"]
+    for num in range(sets):
+        numStr = str(num + 1)
+        headers.append("Reps Set " + numStr)
+        headers.append("Weight Set " + numStr)
+    df = pd.DataFrame(columns=headers)
+    trackerFile = os.path.join(dataPath, name + ".csv")
+    writeCSV(trackerFile, df)
 
 
 class Config():
@@ -97,12 +95,21 @@ class Config():
                     return
         
     def write(self):
-        with open(self.file, 'w') as f:
-            json.dump(self.data, f, indent=4)
+        writeJSON(self.file, self.data)
 
 
+if __name__ == '__main__':
+    # create config and directories if they dont exist
+    if not os.path.isfile(config):
+        data = {
+            'groups': [],
+            'exercises': []
+        }
+        writeJSON(config, data)
 
-
+    for directory in [dataPath, binPath]:
+        if not os.path.exists(directory):
+            os.mkdir(directory)
 
 
 
