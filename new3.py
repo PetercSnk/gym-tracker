@@ -76,11 +76,16 @@ class Config:
             writeCSV(tracker, df)
 
     def removeExercise(self, name):
-        for group in self.data['groups']:
-            self.removeExerciseFromGroup(name, group['name'])
-        exercises = [exercise for exercise in self.data['exercises'] if not (exercise == name)]
-        self.data['exercises'] = exercises
-        # add move tracker to bin
+        if name in self.data['exercises']:
+            for group in self.data['groups']:
+                self.removeExerciseFromGroup(name, group['name'])
+            exercises = [exercise for exercise in self.data['exercises'] if not (exercise == name)]
+            self.data['exercises'] = exercises
+            n = 0
+            while os.path.isfile(os.path.join(self.bin, name, str(n) + '.csv')):
+                n += 1
+            os.rename(os.path.join(self.tracker, name + '.csv'),
+                      os.path.join(self.bin, name, str(n) + '.csv'))
 
     def addExerciseToGroup(self, exerciseName, groupName):
         for index in range(len(self.data['groups'])):
