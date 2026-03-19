@@ -30,16 +30,16 @@ class Config:
         cwd = os.path.dirname(os.path.abspath(__file__))
         self.trackers = os.path.join(cwd, 'trackers')
         self.bin = os.path.join(cwd, 'bin')
-        self.config = os.path.join(cwd, 'config.json')
+        self.file = os.path.join(cwd, 'config.json')
 
-        if not os.path.isfile(self.config):
+        if not os.path.isfile(self.file):
             template = {
                 'groups': [],
                 'exercises': []
             }
-            writeJSON(self.config, template)
+            writeJSON(self.file, template)
 
-        self.data = readJSON(self.config)
+        self.data = readJSON(self.file)
 
         for directory in [self.trackers, self.bin]:
             if not os.path.exists(directory):
@@ -51,41 +51,37 @@ class Config:
                 return group
 
     def createGroup(self, name):
-        groupNames = [group['name'] for group in self.data['groups']]
-        if name not in groupNames:
-            newGroup = {
-                'name': name,
-                'exercises': []
-            }
-            self.data['groups'].append(newGroup)
+        newGroup = {
+            'name': name,
+            'exercises': []
+        }
+        self.data['groups'].append(newGroup)
 
     def removeGroup(self, name):
         groups = [group for group in self.data['groups'] if not (group['name'] == name)]
         self.data['groups'] = groups
 
     def createExercise(self, name, sets):
-        if name not in self.data['exercises']:
-            self.data['exercises'].append(name)
-            headers = ["Date", "Position"]
-            for num in range(sets):
-                numStr = str(num + 1)
-                headers.append("Reps Set " + numStr)
-                headers.append("Weight Set " + numStr)
-            df = pd.DataFrame(columns=headers)
-            tracker = os.path.join(self.trackers, name + ".csv")
-            writeCSV(tracker, df)
+        self.data['exercises'].append(name)
+        headers = ["Date", "Position"]
+        for num in range(sets):
+            numStr = str(num + 1)
+            headers.append("Reps Set " + numStr)
+            headers.append("Weight Set " + numStr)
+        df = pd.DataFrame(columns=headers)
+        tracker = os.path.join(self.trackers, name + ".csv")
+        writeCSV(tracker, df)
 
     def removeExercise(self, name):
-        if name in self.data['exercises']:
-            for group in self.data['groups']:
-                self.removeExerciseFromGroup(name, group['name'])
-            exercises = [exercise for exercise in self.data['exercises'] if not (exercise == name)]
-            self.data['exercises'] = exercises
-            n = 0
-            while os.path.isfile(os.path.join(self.bin, name, str(n) + '.csv')):
-                n += 1
-            os.rename(os.path.join(self.tracker, name + '.csv'),
-                      os.path.join(self.bin, name, str(n) + '.csv'))
+        for group in self.data['groups']:
+            self.removeExerciseFromGroup(name, group['name'])
+        exercises = [exercise for exercise in self.data['exercises'] if not (exercise == name)]
+        self.data['exercises'] = exercises
+        n = 0
+        while os.path.isfile(os.path.join(self.bin, name + str(n) + '.csv')):
+            n += 1
+        os.rename(os.path.join(self.trackers, name + '.csv'),
+                  os.path.join(self.bin, name + str(n) + '.csv'))
 
     def addExerciseToGroup(self, exerciseName, groupName):
         for index in range(len(self.data['groups'])):
@@ -107,22 +103,72 @@ class Config:
         writeJSON(self.file, self.data)
 
 
-def mainMenu():
+def getValidInt(prompt):
+    i = input(prompt)
+    try:
+        return int(i)
+    except ValueError:
+        return 0
+    
+
+def doesGroupExist(name, groups):
+    groupNames = [group['name'] for group in groups]
+    if name in groupNames:
+        return True
+    else:
+        return False
+
+
+def mainMenu(config):
     while True:
         print(
             """
-            Configure Manager
-            Groups      (1)
-            Exercises   (2)
-            Exit        (3)
+            Create Group                (1)
+            Delete Group                (2)
+            Create Exercise             (3)
+            Delete Exercise             (4)
+            Add Exercise to Group       (5)
+            Remove Exercise from Group  (6)
             """
         )
+        choice = getValidInt('choice: ')
+        if choice in [1, 2, 3, 4]:
+            name = input('name: ')
+        match choice:
+            case 1:
+                if not doesGroupExist(name, config.data['groups']):
+                    config.createGroup(name)
+                else:
+                    print('already exists')
+            case 2:
+                if doesGroupExist(name, config.data['groups']):
+                    config.removeGroup(name)
+                else:
+                    print('does not exist')
+            case 3:
+                if name not in config.data['exercises']:
+                    sets = getValidInt('sets: ')
+                    if sets:
+                        config.createExercise(name, sets)
+                    else:
+                        print('invalid number of sets')
+                else:
+                    print('already exists')
+            case 4:
+                if name in config.data['exercises']:
+                    config.removeExercise(name)
+                else:
+                    print('does not exist')
+            case _:
+                print('invalid')
+
+        config.write()
+
 
 
 if __name__ == '__main__':
-
-
-    c = Config()
+    config = Config()
+    mainMenu(config)
 
 
 
