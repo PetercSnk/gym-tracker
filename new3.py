@@ -45,10 +45,11 @@ class Config:
             if not os.path.exists(directory):
                 os.mkdir(directory)
 
-    def getGroup(self, name):
-        for group in self.data['groups']:
-            if group['name'] == name:
-                return group
+    def exercisesToStr(self):
+        exercisesStr = ''
+        for i, exercise in enumerate(self.data['exercises']):
+            exercisesStr += '({}) {} '.format((i + 1), exercise)
+        return exercisesStr
 
     def createGroup(self, name):
         newGroup = {
@@ -123,12 +124,14 @@ def mainMenu(config):
     while True:
         print(
             """
+            ===============================
             Create Group                (1)
             Delete Group                (2)
             Create Exercise             (3)
             Delete Exercise             (4)
             Add Exercise to Group       (5)
             Remove Exercise from Group  (6)
+            ===============================
             """
         )
         choice = getValidInt('choice: ')
@@ -159,6 +162,18 @@ def mainMenu(config):
                     config.removeExercise(name)
                 else:
                     print('does not exist')
+            case 5:
+                print('available exercises: ', config.exercisesToStr())
+                choice = getValidInt('choice: ')
+                total = len(config.data['exercises'])
+                if choice > 0 and choice <= total:
+                    exercise = config.data['exercises'][(choice - 1)]
+                    
+                else:
+                    print('invalid choice')
+
+                    
+
             case _:
                 print('invalid')
 
