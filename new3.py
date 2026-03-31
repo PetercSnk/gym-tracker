@@ -1,6 +1,9 @@
 import os
 import pandas as pd
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def readCSV(filename):
@@ -52,45 +55,67 @@ class Config:
         return exercisesStr
 
     def createGroup(self, name):
-        newGroup = {
-            'name': name,
-            'exercises': []
-        }
-        self.data['groups'].append(newGroup)
+        if not self.doesGroupExist(name):
+            newGroup = {
+                'name': name,
+                'exercises': []
+            }
+            self.data['groups'].append(newGroup)
+        else:
+            logger.error('group already exists')
 
     def removeGroup(self, name):
-        groups = [group for group in self.data['groups'] if not (group['name'] == name)]
-        self.data['groups'] = groups
+        if self.doesGroupExist(name):
+            groups = [
+                group
+                for group in self.data['groups']
+                if not (group['name'] == name)
+            ]
+            self.data['groups'] = groups
+        else:
+            logger.error('group does not exist')
 
     def createExercise(self, name, sets):
-        self.data['exercises'].append(name)
-        headers = ["Date", "Position"]
-        for num in range(sets):
-            numStr = str(num + 1)
-            headers.append("Reps Set " + numStr)
-            headers.append("Weight Set " + numStr)
-        df = pd.DataFrame(columns=headers)
-        tracker = os.path.join(self.trackers, name + ".csv")
-        writeCSV(tracker, df)
+        if not self.doesExerciseExist(name):
+            self.data['exercises'].append(name)
+            headers = ["date", "position"]
+            for num in range(sets):
+                numStr = str(num + 1)
+                headers.append("reps" + numStr)
+                headers.append("weight" + numStr)
+            df = pd.DataFrame(columns=headers)
+            tracker = os.path.join(self.trackers, name + ".csv")
+            writeCSV(tracker, df)
+        else:
+            logger.error('exercise already exists')
 
     def removeExercise(self, name):
-        for group in self.data['groups']:
-            self.removeExerciseFromGroup(name, group['name'])
-        exercises = [exercise for exercise in self.data['exercises'] if not (exercise == name)]
-        self.data['exercises'] = exercises
-        n = 0
-        while os.path.isfile(os.path.join(self.bin, name + str(n) + '.csv')):
-            n += 1
-        os.rename(os.path.join(self.trackers, name + '.csv'),
-                  os.path.join(self.bin, name + str(n) + '.csv'))
+        if self.doesExerciseExist(name):
+            for group in self.data['groups']:
+                self.removeExerciseFromGroup(name, group['name'])
+            exercises = [
+                exercise
+                for exercise in self.data['exercises']
+                if not (exercise == name)
+            ]
+            self.data['exercises'] = exercises
+            n = 0
+            while os.path.isfile(os.path.join(self.bin, name + str(n) + '.csv')):
+                n += 1
+            os.rename(os.path.join(self.trackers, name + '.csv'),
+                      os.path.join(self.bin, name + str(n) + '.csv'))
+        else:
+            logger.error('exercise does not exist')
 
     def addExerciseToGroup(self, exerciseName, groupName):
-        for index in range(len(self.data['groups'])):
-            if self.data['groups'][index]['name'] == groupName:
-                if exerciseName in self.data['exercises']:
+        if exerciseName in self.data['exercises']:
+            for index in range(len(self.data['groups'])):
+                if self.data['groups'][index]['name'] == groupName:
                     if exerciseName not in self.data['groups'][index]['exercises']:
                         self.data['groups'][index]['exercises'].append(exerciseName)
                         return
+        else:
+            logger.error('exercise does not exist')
 
     def removeExerciseFromGroup(self, exerciseName, groupName):
         for index in range(len(self.data['groups'])):
@@ -103,6 +128,19 @@ class Config:
     def write(self):
         writeJSON(self.file, self.data)
 
+    def doesGroupExist(self, name):
+        groupNames = [group['name'] for group in self.data['groups']]
+        if name in groupNames:
+            return True
+        else:
+            return False
+
+    def doesExerciseExist(self, name):
+        if name in self.data['exercises']:
+            return True
+        else:
+            return False
+
 
 def getValidInt(prompt):
     i = input(prompt)
@@ -112,12 +150,12 @@ def getValidInt(prompt):
         return 0
     
 
-def doesGroupExist(name, groups):
-    groupNames = [group['name'] for group in groups]
-    if name in groupNames:
-        return True
-    else:
-        return False
+# def doesGroupExist(name, groups):
+#     groupNames = [group['name'] for group in groups]
+#     if name in groupNames:
+#         return True
+#     else:
+#         return False
 
 
 def mainMenu(config):
