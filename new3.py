@@ -51,8 +51,15 @@ class Config:
     def exercisesToStr(self):
         exercisesStr = ''
         for i, exercise in enumerate(self.data['exercises']):
-            exercisesStr += '({}) {} '.format((i + 1), exercise)
+            exercisesStr += '({}) {} '.format(i, exercise)
         return exercisesStr
+
+    def groupsToStr(self):
+        groupsStr = ''
+        for i, group in enumerate(self.data['groups']):
+            groupsStr += '({}) {} '.format(i, group['name'])
+        return groupsStr
+
 
     def createGroup(self, name):
         if not self.doesGroupExist(name):
@@ -64,66 +71,72 @@ class Config:
         else:
             logger.error('group already exists')
 
-    def removeGroup(self, name):
-        if self.doesGroupExist(name):
-            groups = [
-                group
-                for group in self.data['groups']
-                if not (group['name'] == name)
-            ]
-            self.data['groups'] = groups
+    def popGroup(self, index):
+        if self.validIndex(index, self.data['groups']):
+            self.data['groups'].pop(index)
         else:
             logger.error('group does not exist')
 
-    def createExercise(self, name, sets):
-        if not self.doesExerciseExist(name):
-            self.data['exercises'].append(name)
-            headers = ["date", "position"]
-            for num in range(sets):
-                numStr = str(num + 1)
-                headers.append("reps" + numStr)
-                headers.append("weight" + numStr)
-            df = pd.DataFrame(columns=headers)
-            tracker = os.path.join(self.trackers, name + ".csv")
-            writeCSV(tracker, df)
+    def validIndex(self, index, arr):
+        if 0 <= index < len(arr):
+            return True
         else:
-            logger.error('exercise already exists')
+            return False
 
-    def removeExercise(self, name):
-        if self.doesExerciseExist(name):
-            for group in self.data['groups']:
-                self.removeExerciseFromGroup(name, group['name'])
+    def popExercise(self, eIndex):
+        if not self.validIndex(eIndex, self.data['exercises']):
+            logger.error('exercise does not exist')
+            return
+        n = 0
+        while os.path.isfile(os.path.join(self.bin, self.data['exercises'][eIndex] + str(n) + '.csv')):
+            n += 1
+        os.rename(os.path.join(self.trackers, self.data['exercises'][eIndex] + '.csv'),
+                  os.path.join(self.bin, self.data['exercises'][eIndex] + str(n) + '.csv'))
+        for gIndex in range(len(self.data['groups'])):
+            self.popFromGroup(eIndex, gIndex)
+        self.data['exercises'].pop(eIndex)
+
+    def addToGroup(self, eIndex, gIndex):
+        if not self.validIndex(eIndex, self.data['exercises']):
+            logger.error('invalid exercise')
+            return
+        if not self.validIndex(gIndex, self.data['groups']):
+            logger.error('invalid group')
+            return
+        if self.data['exercises'][eIndex] not in self.data['groups'][gIndex]['exercises']:
+            self.data['groups'][gIndex]['exercises'].append(self.data['exercises'][eIndex])
+
+    def popFromGroup(self, eIndex, gIndex):
+        if not self.validIndex(eIndex, self.data['exercises']):
+            logger.error('invalid exercise')
+            return
+        if not self.validIndex(gIndex, self.data['groups']):
+            logger.error('invalid group')
+            return
+        if self.data['exercises'][eIndex] in self.data['groups'][gIndex]['exercises']:
             exercises = [
                 exercise
-                for exercise in self.data['exercises']
-                if not (exercise == name)
+                for exercise in self.data['groups'][gIndex]['exercises']
+                if not (exercise == self.data['exercises'][eIndex])
             ]
-            self.data['exercises'] = exercises
-            n = 0
-            while os.path.isfile(os.path.join(self.bin, name + str(n) + '.csv')):
-                n += 1
-            os.rename(os.path.join(self.trackers, name + '.csv'),
-                      os.path.join(self.bin, name + str(n) + '.csv'))
-        else:
-            logger.error('exercise does not exist')
+            self.data['groups'][gIndex]['exercises'] = exercises
 
-    def addExerciseToGroup(self, exerciseName, groupName):
-        if exerciseName in self.data['exercises']:
-            for index in range(len(self.data['groups'])):
-                if self.data['groups'][index]['name'] == groupName:
-                    if exerciseName not in self.data['groups'][index]['exercises']:
-                        self.data['groups'][index]['exercises'].append(exerciseName)
-                        return
-        else:
-            logger.error('exercise does not exist')
-
-    def removeExerciseFromGroup(self, exerciseName, groupName):
-        for index in range(len(self.data['groups'])):
-            if self.data['groups'][index]['name'] == groupName:
-                if exerciseName in self.data['exercises']:
-                    exercises = [exercise for exercise in self.data['groups'][index]['exercises'] if not (exercise == exerciseName)]
-                    self.data['groups'][index]['exercises'] = exercises
-                    return
+    def createExercise(self, name, sets):
+        if self.doesExerciseExist(name):
+            logger.error('exercise already exists')
+            return
+        if sets < 1:
+            logger.error('sets must be greater than 0')
+            return
+        self.data['exercises'].append(name)
+        headers = ["date", "position"]
+        for num in range(sets):
+            numStr = str(num + 1)
+            headers.append("reps" + numStr)
+            headers.append("weight" + numStr)
+        df = pd.DataFrame(columns=headers)
+        tracker = os.path.join(self.trackers, name + ".csv")
+        writeCSV(tracker, df)
 
     def write(self):
         writeJSON(self.file, self.data)
@@ -142,12 +155,12 @@ class Config:
             return False
 
 
-def getValidInt(prompt):
-    i = input(prompt)
+
+def toInt(i):
     try:
         return int(i)
     except ValueError:
-        return 0
+        return -1
     
 
 # def doesGroupExist(name, groups):
@@ -163,69 +176,50 @@ def mainMenu(config):
         print(
             """
             ===============================
-            Create Group                (1)
-            Delete Group                (2)
-            Create Exercise             (3)
-            Delete Exercise             (4)
-            Add Exercise to Group       (5)
-            Remove Exercise from Group  (6)
+            Create Group                (0)
+            Delete Group                (1)
+            Create Exercise             (2)
+            Delete Exercise             (3)
+            Add Exercise to Group       (4)
+            Remove Exercise from Group  (5)
+            Save & Exit                 (6)
             ===============================
             """
         )
-        choice = getValidInt('choice: ')
-        if choice in [1, 2, 3, 4]:
-            name = input('name: ')
+        choice = toInt(input('choice: '))
         match choice:
+            case 0:
+                name = input('name: ')
+                config.createGroup(name)
             case 1:
-                if not doesGroupExist(name, config.data['groups']):
-                    config.createGroup(name)
-                else:
-                    print('already exists')
+                gIndex = toInt(input(config.groupsToStr()))
+                config.popGroup(gIndex)
             case 2:
-                if doesGroupExist(name, config.data['groups']):
-                    config.removeGroup(name)
-                else:
-                    print('does not exist')
+                name = input('name: ')
+                sets = toInt(input('sets: '))
+                config.createExercise(name, sets)
             case 3:
-                if name not in config.data['exercises']:
-                    sets = getValidInt('sets: ')
-                    if sets:
-                        config.createExercise(name, sets)
-                    else:
-                        print('invalid number of sets')
-                else:
-                    print('already exists')
+                eIndex = toInt(input(config.exercisesToStr()))
+                config.popExercise(eIndex)
             case 4:
-                if name in config.data['exercises']:
-                    config.removeExercise(name)
-                else:
-                    print('does not exist')
+                eIndex = toInt(input(config.exercisesToStr()))
+                gIndex = toInt(input(config.groupsToStr()))
+                config.addToGroup(eIndex, gIndex)
             case 5:
-                print('available exercises: ', config.exercisesToStr())
-                choice = getValidInt('choice: ')
-                total = len(config.data['exercises'])
-                if choice > 0 and choice <= total:
-                    exercise = config.data['exercises'][(choice - 1)]
-                    
-                else:
-                    print('invalid choice')
-
-                    
-
+                eIndex = toInt(input(config.exercisesToStr()))
+                gIndex = toInt(input(config.groupsToStr()))
+                config.popFromGroup(eIndex, gIndex)
+            case 6:
+                return
             case _:
                 print('invalid')
-
         config.write()
 
 
 
 if __name__ == '__main__':
-    config = Config()
-    mainMenu(config)
-
-
-
-
+    c = Config()
+    mainMenu(c)
     #c.createExercise("a")
     # c.addExerciseToGroup("x", "g1")
     # c.addExerciseToGroup('x', 'g2')
