@@ -42,24 +42,26 @@ class Config:
             }
             writeJSON(self.file, template)
 
-        self.data = readJSON(self.file)
+        data = readJSON(self.file)
+        self.groups = data['groups']
+        self.exercises = data['exercises']
 
         for directory in [self.trackers, self.bin]:
             if not os.path.exists(directory):
                 os.mkdir(directory)
 
     def exercisesToStr(self):
-        exercisesStr = ''
-        for i, exercise in enumerate(self.data['exercises']):
-            exercisesStr += '({}) {} '.format(i, exercise)
+        exercisesStr = '===========Excercises=========='
+        for i, exercise in enumerate(self.exercises):
+            exercisesStr += '\n({}) {} '.format(i, exercise)
+        exercisesStr += '\n==============================='
         return exercisesStr
 
     def groupsToStr(self):
         groupsStr = ''
-        for i, group in enumerate(self.data['groups']):
+        for i, group in enumerate(self.groups):
             groupsStr += '({}) {} '.format(i, group['name'])
         return groupsStr
-
 
     def createGroup(self, name):
         if not self.doesGroupExist(name):
@@ -67,13 +69,13 @@ class Config:
                 'name': name,
                 'exercises': []
             }
-            self.data['groups'].append(newGroup)
+            self.groups.append(newGroup)
         else:
             logger.error('group already exists')
 
     def popGroup(self, index):
-        if self.validIndex(index, self.data['groups']):
-            self.data['groups'].pop(index)
+        if self.validIndex(index, self.groups):
+            self.groups.pop(index)
         else:
             logger.error('group does not exist')
 
@@ -84,51 +86,51 @@ class Config:
             return False
 
     def popExercise(self, eIndex):
-        if not self.validIndex(eIndex, self.data['exercises']):
+        if not self.validIndex(eIndex, self.exercises):
             logger.error('exercise does not exist')
             return
         n = 0
-        while os.path.isfile(os.path.join(self.bin, self.data['exercises'][eIndex] + str(n) + '.csv')):
+        while os.path.isfile(os.path.join(self.bin, self.exercises[eIndex] + str(n) + '.csv')):
             n += 1
-        os.rename(os.path.join(self.trackers, self.data['exercises'][eIndex] + '.csv'),
-                  os.path.join(self.bin, self.data['exercises'][eIndex] + str(n) + '.csv'))
-        for gIndex in range(len(self.data['groups'])):
+        os.rename(os.path.join(self.trackers, self.exercises[eIndex] + '.csv'),
+                  os.path.join(self.bin, self.exercises[eIndex] + str(n) + '.csv'))
+        for gIndex in range(len(self.groups)):
             self.popFromGroup(eIndex, gIndex)
-        self.data['exercises'].pop(eIndex)
+        self.exercises.pop(eIndex)
 
     def addToGroup(self, eIndex, gIndex):
-        if not self.validIndex(eIndex, self.data['exercises']):
+        if not self.validIndex(eIndex, self.exercises):
             logger.error('invalid exercise')
             return
-        if not self.validIndex(gIndex, self.data['groups']):
+        if not self.validIndex(gIndex, self.groups):
             logger.error('invalid group')
             return
-        if self.data['exercises'][eIndex] not in self.data['groups'][gIndex]['exercises']:
-            self.data['groups'][gIndex]['exercises'].append(self.data['exercises'][eIndex])
+        if self.exercises[eIndex] not in self.groups[gIndex]['exercises']:
+            self.groups[gIndex]['exercises'].append(self.exercises[eIndex])
 
     def popFromGroup(self, eIndex, gIndex):
-        if not self.validIndex(eIndex, self.data['exercises']):
+        if not self.validIndex(eIndex, self.exercises):
             logger.error('invalid exercise')
             return
-        if not self.validIndex(gIndex, self.data['groups']):
+        if not self.validIndex(gIndex, self.groups):
             logger.error('invalid group')
             return
-        if self.data['exercises'][eIndex] in self.data['groups'][gIndex]['exercises']:
+        if self.exercises[eIndex] in self.groups[gIndex]['exercises']:
             exercises = [
                 exercise
-                for exercise in self.data['groups'][gIndex]['exercises']
-                if not (exercise == self.data['exercises'][eIndex])
+                for exercise in self.groups[gIndex]['exercises']
+                if not (exercise == self.exercises[eIndex])
             ]
-            self.data['groups'][gIndex]['exercises'] = exercises
+            self.groups[gIndex]['exercises'] = exercises
 
     def createExercise(self, name, sets):
-        if self.doesExerciseExist(name):
+        if name in self.exercises:
             logger.error('exercise already exists')
             return
         if sets < 1:
             logger.error('sets must be greater than 0')
             return
-        self.data['exercises'].append(name)
+        self.exercises.append(name)
         headers = ["date", "position"]
         for num in range(sets):
             numStr = str(num + 1)
@@ -139,21 +141,18 @@ class Config:
         writeCSV(tracker, df)
 
     def write(self):
-        writeJSON(self.file, self.data)
+        data = {
+            'groups': self.groups,
+            'exercises': self.exercises
+        }
+        writeJSON(self.file, data)
 
     def doesGroupExist(self, name):
-        groupNames = [group['name'] for group in self.data['groups']]
+        groupNames = [group['name'] for group in self.groups]
         if name in groupNames:
             return True
         else:
             return False
-
-    def doesExerciseExist(self, name):
-        if name in self.data['exercises']:
-            return True
-        else:
-            return False
-
 
 
 def toInt(i):
@@ -161,14 +160,6 @@ def toInt(i):
         return int(i)
     except ValueError:
         return -1
-    
-
-# def doesGroupExist(name, groups):
-#     groupNames = [group['name'] for group in groups]
-#     if name in groupNames:
-#         return True
-#     else:
-#         return False
 
 
 def mainMenu(config):
