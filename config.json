@@ -2,30 +2,33 @@
     "groups": [
         {
             "name": "g1",
-            "exercises": [
-                "b",
-                "c",
-                "z",
-                "x"
-            ]
+            "exercises": []
         },
         {
             "name": "g2",
-            "exercises": [
-                "d",
-                "f",
-                "z",
-                "x"
-            ]
+            "exercises": []
+        },
+        {
+            "name": "g3",
+            "exercises": []
+        },
+        {
+            "name": "a",
+            "exercises": []
+        },
+        {
+            "name": "f",
+            "exercises": []
+        },
+        {
+            "name": "c",
+            "exercises": []
         }
     ],
     "exercises": [
         "b",
         "c",
-        "d",
-        "e",
-        "f",
-        "z",
-        "x"
+        "a",
+        "l"
     ]
 }

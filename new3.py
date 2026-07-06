@@ -2,6 +2,7 @@ import os
 import pandas as pd
 import json
 import logging
+import strings
 
 logger = logging.getLogger(__name__)
 
@@ -115,13 +116,12 @@ class Config:
         if not self.validIndex(gIndex, self.groups):
             logger.error('invalid group')
             return
-        if self.exercises[eIndex] in self.groups[gIndex]['exercises']:
-            exercises = [
-                exercise
-                for exercise in self.groups[gIndex]['exercises']
-                if not (exercise == self.exercises[eIndex])
-            ]
-            self.groups[gIndex]['exercises'] = exercises
+        exercises = [
+            exercise
+            for exercise in self.groups[gIndex]['exercises']
+            if not (exercise == self.exercises[eIndex])
+        ]
+        self.groups[gIndex]['exercises'] = exercises
 
     def createExercise(self, name, sets):
         if name in self.exercises:
@@ -164,19 +164,7 @@ def toInt(i):
 
 def mainMenu(config):
     while True:
-        print(
-            """
-            ===============================
-            Create Group                (0)
-            Delete Group                (1)
-            Create Exercise             (2)
-            Delete Exercise             (3)
-            Add Exercise to Group       (4)
-            Remove Exercise from Group  (5)
-            Save & Exit                 (6)
-            ===============================
-            """
-        )
+        print(strings.menu)
         choice = toInt(input('choice: '))
         match choice:
             case 0:
